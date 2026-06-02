@@ -341,6 +341,22 @@ def _get_available_ram_gb():
     meminfo = _parse_meminfo()
     if "MemAvailable" in meminfo:
         return meminfo["MemAvailable"] / (1024**2)
+
+    # macOS: parse vm_stat for reclaimable pages (free + inactive + speculative + purgeable)
+    vm = _run(["vm_stat"])
+    if vm:
+        page_size = 16384
+        m = re.search(r"page size of (\d+) bytes", vm)
+        if m:
+            page_size = int(m.group(1))
+        pages = 0
+        for label in ("Pages free", "Pages inactive", "Pages speculative", "Pages purgeable"):
+            match = re.search(rf"{label}:\s+([\d]+)", vm)
+            if match:
+                pages += int(match.group(1))
+        if pages:
+            return (pages * page_size) / (1024 ** 3)
+
     return _get_ram_gb() * 0.7
 
 
