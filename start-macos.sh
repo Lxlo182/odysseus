@@ -100,8 +100,10 @@ echo "▶ Installing Python packages (first run downloads a few — can take a f
 echo "▶ Preparing Odysseus…"
 ODYSSEUS_SKIP_RUN_HINT=1 ./venv/bin/python setup.py
 
-# 5. Launch. Bind to loopback only (safe default).
-URL="http://127.0.0.1:$PORT"
+# 5. Launch. Read APP_BIND from .env if set, default to loopback.
+APP_BIND="${APP_BIND:-$(grep -E '^APP_BIND=' .env 2>/dev/null | cut -d= -f2)}"
+APP_BIND="${APP_BIND:-127.0.0.1}"
+URL="http://$APP_BIND:$PORT"
 
 # Open the browser automatically once the server is accepting connections — so
 # the URL isn't lost in the startup logs that keep scrolling. Runs in the
@@ -136,4 +138,4 @@ echo
 echo "▶ Starting Odysseus — it will open in your browser at $URL"
 echo "  (this takes a few seconds; press Ctrl+C here to stop)"
 echo
-"$PY" -m uvicorn app:app --host 127.0.0.1 --port "$PORT"
+"$PY" -m uvicorn app:app --host "$APP_BIND" --port "$PORT"
