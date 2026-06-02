@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import shutil
 import subprocess
 import time
@@ -234,10 +235,10 @@ def _detect_apple_silicon():
 
     # Chip name, e.g. "Apple M4 Max" — carries the Pro/Max/Ultra variant that
     # the fit bandwidth table keys off of.
-    brand = (_run(["sysctl", "-n", "machdep.cpu.brand_string"]) or "Apple Silicon").strip()
+    brand = (_run(["/usr/sbin/sysctl", "-n", "machdep.cpu.brand_string"]) or "Apple Silicon").strip()
 
     # Total unified memory in bytes.
-    memsize = _run(["sysctl", "-n", "hw.memsize"])
+    memsize = _run(["/usr/sbin/sysctl", "-n", "hw.memsize"])
     try:
         total_gb = int(memsize) / (1024**3) if memsize else 0.0
     except ValueError:
@@ -258,7 +259,7 @@ def _detect_apple_silicon():
     else:
         frac = 0.80
     vram_gb = round(total_gb * frac, 1)
-    wired = _run(["sysctl", "-n", "iogpu.wired_limit_mb"])
+    wired = _run(["/usr/sbin/sysctl", "-n", "iogpu.wired_limit_mb"])
     try:
         wired_mb = int(wired) if wired else 0
         if wired_mb > 0:
@@ -328,7 +329,7 @@ def _get_ram_gb():
 
     # macOS has no /proc/meminfo — fall back to sysctl (works locally and over
     # SSH to a remote Mac, where the sysconf path above isn't taken).
-    memsize = _run(["sysctl", "-n", "hw.memsize"])
+    memsize = _run(["/usr/sbin/sysctl", "-n", "hw.memsize"])
     if memsize:
         try:
             return int(memsize.strip()) / (1024**3)
@@ -369,7 +370,7 @@ def _get_cpu_name():
 
     # macOS has no /proc/cpuinfo — sysctl gives the chip name (e.g. "Apple M4").
     # Harmlessly returns nothing on Linux, so it's safe to try unconditionally.
-    brand = _run(["sysctl", "-n", "machdep.cpu.brand_string"])
+    brand = _run(["/usr/sbin/sysctl", "-n", "machdep.cpu.brand_string"])
     if brand and brand.strip():
         return brand.strip()
 
@@ -381,7 +382,7 @@ def _get_cpu_name():
 def _get_cpu_count():
     if _remote_host:
         # nproc on Linux; hw.ncpu via sysctl on a remote Mac (no nproc there).
-        out = _run(["nproc"]) or _run(["sysctl", "-n", "hw.ncpu"])
+        out = _run(["nproc"]) or _run(["/usr/sbin/sysctl", "-n", "hw.ncpu"])
         if out:
             try:
                 return int(out.strip())
